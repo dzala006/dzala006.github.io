@@ -62,6 +62,22 @@ const ItinerarySchema = new mongoose.Schema({
       weatherDependent: {
         type: Boolean,
         default: false
+      },
+      reservation: {
+        reservationId: String,
+        confirmedTime: String,
+        provider: String,
+        confirmationCode: String,
+        status: {
+          type: String,
+          enum: ['pending', 'confirmed', 'cancelled'],
+          default: 'pending'
+        },
+        notes: String,
+        createdAt: {
+          type: Date,
+          default: Date.now
+        }
       }
     }]
   }],

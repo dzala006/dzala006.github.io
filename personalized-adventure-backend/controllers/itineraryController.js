@@ -3,6 +3,7 @@ const Itinerary = require('../models/Itinerary');
 const User = require('../models/User');
 const weatherAPI = require('../utils/weatherAPI');
 const eventsAPI = require('../utils/eventsAPI');
+const { autoReservationFallback } = require('../utils/reservationAI');
 
 // Get all itineraries
 exports.getAllItineraries = async (req, res) => {
@@ -197,6 +198,207 @@ exports.deleteItinerary = async (req, res) => {
       error: error.message
     });
   }
+};
+
+/**
+ * Reserve an activity for an itinerary
+ * This function attempts to secure a reservation through external APIs first,
+ * and if that fails, it uses the AI-based fallback mechanism.
+ * 
+ * @route POST /api/itineraries/:id/reserve
+ * @access Private
+ */
+exports.reserveActivity = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { activityType, activityId, desiredTime, partySize, specialRequests } = req.body;
+    
+    // Validate required fields
+    if (!activityType || !desiredTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required fields: activityType, desiredTime'
+      });
+    }
+    
+    // Check if the itinerary ID is valid
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid itinerary ID format'
+      });
+    }
+    
+    // Find the itinerary
+    const itinerary = await Itinerary.findById(id);
+    
+    // Check if itinerary exists
+    if (!itinerary) {
+      return res.status(404).json({
+        success: false,
+        message: 'Itinerary not found'
+      });
+    }
+    
+    // Log the reservation attempt
+    console.log(`Attempting to reserve ${activityType} for itinerary ${id} at ${desiredTime}`);
+    
+    // Attempt to make a reservation through external APIs (simulated)
+    let reservationResult = await attemptExternalReservation(
+      activityType, 
+      itinerary.location, 
+      desiredTime, 
+      partySize, 
+      specialRequests
+    );
+    
+    // If external reservation failed, use the AI fallback
+    if (!reservationResult.success) {
+      console.log(`External reservation failed. Attempting AI fallback for ${activityType}`);
+      
+      // Get user preferences from the itinerary
+      const user = await User.findById(itinerary.userId);
+      
+      // Prepare details for the fallback system
+      const fallbackDetails = {
+        activityType,
+        desiredTime,
+        location: itinerary.location,
+        userPreferences: user ? user.preferences : itinerary.preferences,
+        partySize: partySize || 2,
+        specialRequests: specialRequests || ''
+      };
+      
+      // Call the AI fallback system
+      reservationResult = await autoReservationFallback(fallbackDetails);
+      
+      // Log the fallback result
+      if (reservationResult.success) {
+        console.log(`AI fallback reservation successful: ${reservationResult.reservationId}`);
+      } else {
+        console.log(`AI fallback reservation failed: ${reservationResult.message}`);
+      }
+    }
+    
+    // If the reservation was successful (either through external API or fallback)
+    if (reservationResult.success) {
+      // Update the itinerary with the reservation information
+      // Find the specific activity in the itinerary days
+      let activityUpdated = false;
+      
+      if (activityId) {
+        // If an activityId was provided, find and update that specific activity
+        for (let i = 0; i < itinerary.days.length; i++) {
+          const activityIndex = itinerary.days[i].activities.findIndex(
+            activity => activity._id.toString() === activityId
+          );
+          
+          if (activityIndex !== -1) {
+            // Add reservation details to the activity
+            itinerary.days[i].activities[activityIndex].reservation = {
+              reservationId: reservationResult.reservationId,
+              confirmedTime: desiredTime,
+              provider: reservationResult.details?.provider || 'External Reservation System',
+              confirmationCode: reservationResult.details?.confirmationCode || reservationResult.reservationId,
+              status: 'confirmed',
+              notes: reservationResult.details?.notes || '',
+              createdAt: new Date()
+            };
+            
+            activityUpdated = true;
+            break;
+          }
+        }
+      }
+      
+      // Save the updated itinerary
+      await itinerary.save();
+      
+      res.status(200).json({
+        success: true,
+        message: 'Reservation successful',
+        data: {
+          reservationId: reservationResult.reservationId,
+          activityUpdated,
+          provider: reservationResult.details?.provider || 'External Reservation System',
+          confirmationCode: reservationResult.details?.confirmationCode || reservationResult.reservationId
+        }
+      });
+    } else {
+      // If all reservation attempts failed
+      res.status(400).json({
+        success: false,
+        message: 'Unable to secure reservation',
+        error: reservationResult.message || 'All reservation attempts failed'
+      });
+    }
+  } catch (error) {
+    console.error('Error in reserveActivity:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing reservation',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Simulate an attempt to make a reservation through external APIs
+ * In a real application, this would call actual reservation APIs like OpenTable, Viator, etc.
+ * 
+ * @param {string} activityType - Type of activity (restaurant, tour, event, etc.)
+ * @param {string} location - Location of the activity
+ * @param {string} desiredTime - Preferred time for the reservation
+ * @param {number} partySize - Number of people in the party
+ * @param {string} specialRequests - Any special requests for the reservation
+ * @returns {Promise<Object>} - Promise resolving to a reservation result
+ */
+const attemptExternalReservation = async (activityType, location, desiredTime, partySize, specialRequests) => {
+  return new Promise((resolve) => {
+    // Simulate API call delay
+    setTimeout(() => {
+      // Simulate a 40% failure rate for external APIs
+      const isSuccessful = Math.random() > 0.4;
+      
+      if (isSuccessful) {
+        resolve({
+          success: true,
+          reservationId: `EXT${Math.floor(100000 + Math.random() * 900000)}`,
+          message: 'Reservation confirmed',
+          details: {
+            provider: getProviderByActivityType(activityType),
+            confirmationCode: `${Date.now().toString(36)}`,
+            notes: 'Reservation confirmed through external provider'
+          }
+        });
+      } else {
+        resolve({
+          success: false,
+          message: 'No availability found through external providers',
+          reason: 'No available slots for the requested time and party size'
+        });
+      }
+    }, 1000); // Simulate 1 second API call
+  });
+};
+
+/**
+ * Get the appropriate provider name based on activity type
+ * 
+ * @param {string} activityType - Type of activity
+ * @returns {string} - Provider name
+ */
+const getProviderByActivityType = (activityType) => {
+  const providers = {
+    restaurant: 'OpenTable',
+    tour: 'Viator',
+    event: 'Ticketmaster',
+    attraction: 'GetYourGuide',
+    activity: 'Klook',
+    default: 'Booking Partner'
+  };
+  
+  return providers[activityType.toLowerCase()] || providers.default;
 };
 
 // Generate a personalized itinerary
