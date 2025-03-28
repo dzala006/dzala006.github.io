@@ -41,7 +41,11 @@ const client = new MongoClient(uri, {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
+  connectTimeoutMS: 30000,
+  socketTimeoutMS: 45000,
+  maxPoolSize: 50,
+  wtimeoutMS: 2500
 });
 
 // Connect to MongoDB Atlas and then start the server
@@ -56,7 +60,9 @@ async function startServer() {
     // Connect to MongoDB for Mongoose (using the same URI)
     await mongoose.connect(uri, {
       useNewUrlParser: true,
-      useUnifiedTopology: true
+      useUnifiedTopology: true,
+      connectTimeoutMS: 30000,
+      socketTimeoutMS: 45000
     });
     console.log('Connected to MongoDB with Mongoose');
     
@@ -66,6 +72,8 @@ async function startServer() {
     });
   } catch (err) {
     console.error('MongoDB connection error:', err);
+    console.log('Please check your MongoDB Atlas credentials and network connection.');
+    console.log('See MONGODB_SETUP.md for troubleshooting steps.');
     process.exit(1);
   }
 }
