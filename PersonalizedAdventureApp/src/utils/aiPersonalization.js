@@ -7,7 +7,6 @@
  */
 
 // Import TensorFlow.js
-// Note: You'll need to install this package with: npm install @tensorflow/tfjs
 import * as tf from '@tensorflow/tfjs';
 
 // Import helper functions from separate files to keep code organized
@@ -20,6 +19,36 @@ import {
 
 // Import the fallback rule-based approach
 import { generateRuleBasedItinerary } from './aiPersonalizationRuleBased';
+
+// Import TensorFlow.js setup utilities
+import { setupTensorFlow } from './tensorflowSetup';
+
+// Model reference to be initialized
+let model = null;
+
+/**
+ * Initialize the TensorFlow model
+ * @returns {Promise<boolean>} True if initialization was successful
+ */
+export const initializeModel = async () => {
+  try {
+    // Initialize TensorFlow.js
+    const tfReady = await setupTensorFlow();
+    if (!tfReady) {
+      console.warn('TensorFlow.js initialization failed, falling back to rule-based system');
+      return false;
+    }
+    
+    // Load the model
+    model = await loadTensorFlowModel();
+    
+    console.log('AI personalization model initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('Error initializing AI personalization model:', error);
+    return false;
+  }
+};
 
 /**
  * Loads the TensorFlow.js model from a local file or URL
@@ -204,19 +233,25 @@ export const generateDynamicItinerary = async (userData, feedbackData, weatherDa
       eventsData = { events: [] };
     }
     
-    // 1. Load the TensorFlow.js model
-    const model = await loadTensorFlowModel();
-    console.log('TensorFlow model loaded successfully');
+    // Initialize model if not already initialized
+    if (!model) {
+      const modelInitialized = await initializeModel();
+      if (!modelInitialized) {
+        console.warn('Using rule-based fallback for itinerary generation');
+        // Fall back to the rule-based method
+        return generateRuleBasedItinerary(userData, feedbackData, weatherData, eventsData);
+      }
+    }
     
-    // 2. Preprocess the input data for the model
+    // Preprocess the input data for the model
     const preprocessedData = preprocessDataForModel(userData, feedbackData, weatherData, eventsData);
     console.log('Data preprocessed for model inference');
     
-    // 3. Run inference with the model
+    // Run inference with the model
     const modelPredictions = await runModelInference(model, preprocessedData);
     console.log('Model inference completed successfully');
     
-    // 4. Post-process the model output into a structured itinerary
+    // Post-process the model output into a structured itinerary
     const itinerary = postProcessModelOutput(modelPredictions, userData, weatherData, eventsData);
     console.log(`Generated itinerary with ${itinerary.days.length} days and ${itinerary.days.reduce((sum, day) => sum + day.activities.length, 0)} activities`);
     
