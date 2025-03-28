@@ -8,7 +8,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 
 // Import routes
-const routes = require('./routes/index');
+const indexRoutes = require('./routes/index');
+const itineraryRoutes = require('./routes/itinerary');
 
 // Initialize Express app
 const app = express();
@@ -20,7 +21,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Use routes
-app.use('/', routes);
+app.use('/', indexRoutes);
+app.use('/api/itineraries', itineraryRoutes);
 
 // Default route
 app.get('/', (req, res) => {
