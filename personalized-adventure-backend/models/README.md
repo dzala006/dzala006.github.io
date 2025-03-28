@@ -1,0 +1,1 @@
+This directory will contain MongoDB models for the application.

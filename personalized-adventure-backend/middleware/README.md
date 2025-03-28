@@ -1,0 +1,1 @@
+This directory will contain middleware functions for the application.
