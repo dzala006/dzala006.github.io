@@ -6,7 +6,6 @@ This guide provides detailed instructions for setting up and running the Persona
 
 - Node.js (v14 or higher)
 - npm (v6 or higher)
-- MongoDB (local installation or MongoDB Atlas account)
 - Xcode (for iOS simulator) or Android Studio (for Android emulator)
 - Expo Go app (if testing on a physical device)
 
@@ -30,24 +29,11 @@ cd personalized-adventure-backend
 
 # Install dependencies
 npm install
-
-# Create a .env file
-cp .env.example .env
 ```
 
-### Configure MongoDB
+### MongoDB Connection
 
-Edit the `.env` file to include your MongoDB connection string:
-
-```
-PORT=3000
-MONGO_URI=mongodb://localhost:27017/personalized-adventure
-```
-
-If you're using MongoDB Atlas, your connection string will look like:
-```
-MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/personalized-adventure
-```
+The backend is now pre-configured to connect to MongoDB Atlas using your credentials. The connection string is hardcoded in `server.js`, so you don't need to set up a `.env` file or configure MongoDB separately.
 
 ### Start the Backend Server
 
@@ -56,7 +42,12 @@ MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/personalized
 npm start
 ```
 
-You should see output indicating the server is running on port 3000 and connected to MongoDB.
+You should see output indicating:
+```
+Successfully connected to MongoDB Atlas!
+Connected to MongoDB with Mongoose
+Server is running on port 3000
+```
 
 ## 2. Frontend Setup
 
@@ -160,8 +151,8 @@ Follow these steps to experience all the features of the app:
 
 ### Backend Issues
 
-- **MongoDB Connection Error**: Verify your connection string in the `.env` file
-- **Port Already in Use**: Change the PORT value in the `.env` file
+- **MongoDB Connection Error**: The MongoDB Atlas connection is now hardcoded in server.js. If you encounter connection issues, check your internet connection or verify the credentials in server.js.
+- **Port Already in Use**: Change the PORT value in the `.env` file or modify the PORT constant in server.js
 
 ### Frontend Issues
 
