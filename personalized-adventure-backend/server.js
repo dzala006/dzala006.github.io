@@ -10,6 +10,7 @@ const bodyParser = require('body-parser');
 // Import routes
 const indexRoutes = require('./routes/index');
 const itineraryRoutes = require('./routes/itinerary');
+const userRoutes = require('./routes/user');
 
 // Initialize Express app
 const app = express();
@@ -23,6 +24,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Use routes
 app.use('/', indexRoutes);
 app.use('/api/itineraries', itineraryRoutes);
+app.use('/api/users', userRoutes);
 
 // Default route
 app.get('/', (req, res) => {

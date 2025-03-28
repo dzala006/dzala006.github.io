@@ -34,6 +34,13 @@ npm run dev
 - `PUT /api/itineraries/:id` - Update an existing itinerary
 - `DELETE /api/itineraries/:id` - Delete an itinerary
 
+### User Endpoints
+- `GET /api/users` - Retrieve all users
+- `POST /api/users` - Create a new user
+- `GET /api/users/:id` - Retrieve a specific user by ID
+- `PUT /api/users/:id` - Update an existing user
+- `DELETE /api/users/:id` - Delete a user
+
 ## Technologies Used
 
 - Node.js
