@@ -151,7 +151,11 @@ Follow these steps to experience all the features of the app:
 
 ### Backend Issues
 
-- **MongoDB Connection Error**: The MongoDB Atlas connection is now hardcoded in server.js. If you encounter connection issues, check your internet connection or verify the credentials in server.js.
+- **MongoDB Connection Error**: If you encounter a MongoDB connection error, try these steps:
+  1. Make sure you have installed the MongoDB driver: `npm install mongodb`
+  2. Check your internet connection
+  3. Verify the credentials in server.js are correct
+  4. Ensure your IP address is whitelisted in MongoDB Atlas (Network Access settings)
 - **Port Already in Use**: Change the PORT value in the `.env` file or modify the PORT constant in server.js
 
 ### Frontend Issues

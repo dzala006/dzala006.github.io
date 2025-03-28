@@ -6,7 +6,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { ServerApiVersion } = require('mongodb');
 
 // Import routes
 const indexRoutes = require('./routes/index');
@@ -35,28 +35,18 @@ app.get('/', (req, res) => {
 // MongoDB Atlas Connection URI
 const uri = "mongodb+srv://dzala006:DZ091206@cluster0.jtpgaha.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
-
-// Connect to MongoDB Atlas and then start the server
+// Connect to MongoDB with Mongoose and start the server
 async function startServer() {
   try {
-    // Connect to MongoDB Atlas
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Successfully connected to MongoDB Atlas!");
-    
-    // Connect to MongoDB for Mongoose (using the same URI)
+    // Connect to MongoDB for Mongoose
     await mongoose.connect(uri, {
       useNewUrlParser: true,
-      useUnifiedTopology: true
+      useUnifiedTopology: true,
+      serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+      }
     });
     console.log('Connected to MongoDB with Mongoose');
     
