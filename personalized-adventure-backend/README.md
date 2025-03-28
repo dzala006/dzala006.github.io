@@ -22,8 +22,17 @@ npm run dev
 
 ## API Endpoints
 
+### Base Endpoints
 - `GET /` - Welcome message
-- More endpoints to be added as the application develops
+- `GET /api` - API information
+
+### Itinerary Endpoints
+- `GET /api/itineraries` - Retrieve all itineraries
+- `POST /api/itineraries` - Create a new itinerary
+- `POST /api/itineraries/generate` - Generate a personalized itinerary based on user preferences
+- `GET /api/itineraries/:id` - Retrieve a specific itinerary by ID
+- `PUT /api/itineraries/:id` - Update an existing itinerary
+- `DELETE /api/itineraries/:id` - Delete an itinerary
 
 ## Technologies Used
 
