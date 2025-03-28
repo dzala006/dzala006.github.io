@@ -6,6 +6,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const { MongoClient, ServerApiVersion } = require('mongodb');
 
 // Import routes
 const indexRoutes = require('./routes/index');
@@ -31,15 +32,43 @@ app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the Personalized Adventure API' });
 });
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/personalized-adventure', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
+// MongoDB Atlas Connection URI
+const uri = "mongodb+srv://dzala006:DZ091206@cluster0.jtpgaha.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
 });
+
+// Connect to MongoDB Atlas and then start the server
+async function startServer() {
+  try {
+    // Connect to MongoDB Atlas
+    await client.connect();
+    // Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log("Successfully connected to MongoDB Atlas!");
+    
+    // Connect to MongoDB for Mongoose (using the same URI)
+    await mongoose.connect(uri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    console.log('Connected to MongoDB with Mongoose');
+    
+    // Start server after successful database connection
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();
