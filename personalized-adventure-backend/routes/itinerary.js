@@ -11,6 +11,9 @@ router.post('/', itineraryController.createItinerary);
 // Generate a personalized itinerary based on user preferences
 router.post('/generate', itineraryController.generateItinerary);
 
+// Reserve an activity for an itinerary
+router.post('/:id/reserve', itineraryController.reserveActivity);
+
 // Get a specific itinerary by ID
 router.get('/:id', itineraryController.getItineraryById);
 

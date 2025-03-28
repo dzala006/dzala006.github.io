@@ -30,6 +30,7 @@ npm run dev
 - `GET /api/itineraries` - Retrieve all itineraries
 - `POST /api/itineraries` - Create a new itinerary
 - `POST /api/itineraries/generate` - Generate a personalized itinerary based on user preferences
+- `POST /api/itineraries/:id/reserve` - Reserve an activity for an itinerary with fallback mechanism
 - `GET /api/itineraries/:id` - Retrieve a specific itinerary by ID
 - `PUT /api/itineraries/:id` - Update an existing itinerary
 - `DELETE /api/itineraries/:id` - Delete an itinerary
@@ -49,3 +50,12 @@ npm run dev
 - Axios for external API calls
 - CORS for cross-origin resource sharing
 - dotenv for environment variables
+
+## Reservation System
+
+The application includes an advanced reservation system with fallback capabilities:
+
+1. When a reservation is requested, the system first attempts to book through external APIs (OpenTable, Viator, etc.)
+2. If the external reservation fails (no availability), the system automatically uses an AI-based fallback mechanism
+3. The AI fallback system analyzes the request details and attempts to secure a reservation through alternative channels
+4. All reservation details are stored with the activity in the itinerary
