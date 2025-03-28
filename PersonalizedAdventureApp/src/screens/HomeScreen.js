@@ -1,9 +1,98 @@
-import React, { useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useContext, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
+import FeedbackPopup from '../components/FeedbackPopup';
+import { scheduleNotification, sendWelcomeNotification } from '../utils/notifications';
 
 const HomeScreen = ({ navigation }) => {
-  const { user, preferences } = useContext(AuthContext);
+  const { user, preferences, updateSurveyData } = useContext(AuthContext);
+  
+  const [showFeedback, setShowFeedback] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    sendWelcomeNotification();
+  }, []);
+
+  const updateUserFeedback = (feedbackData) => {
+    updateSurveyData({
+      responses: {
+        [feedbackData.questionId]: {
+          questionId: feedbackData.questionId,
+          response: feedbackData.response,
+          context: feedbackData.context,
+          timestamp: new Date().toISOString()
+        }
+      }
+    });
+
+    scheduleNotification({
+      title: 'Preferences Updated',
+      message: 'Your adventure preferences have been updated based on your feedback.',
+      data: { screen: 'Profile' },
+      triggerTime: 2
+    });
+
+    Alert.alert(
+      "Feedback Applied",
+      "Your preferences have been updated. Would you like to regenerate your itinerary?",
+      [
+        {
+          text: "Not Now",
+          style: "cancel"
+        },
+        { 
+          text: "Yes", 
+          onPress: () => {
+            navigation.navigate('Itinerary', { regenerate: true });
+            
+            scheduleNotification({
+              title: 'Itinerary Regenerated',
+              message: 'Your itinerary has been updated based on your new preferences.',
+              data: { screen: 'Itinerary', action: 'view_regenerated' },
+              triggerTime: 5
+            });
+          }
+        }
+      ]
+    );
+  };
+
+  const simulateItineraryUpdate = () => {
+    scheduleNotification({
+      title: 'Itinerary Update',
+      message: 'Weather alert: We\'ve adjusted your afternoon activities due to expected rain.',
+      data: { screen: 'Itinerary', action: 'view_updated' },
+      triggerTime: null
+    });
+
+    Alert.alert(
+      "Itinerary Updated",
+      "We've adjusted your afternoon activities due to expected rain. Check your itinerary for details.",
+      [
+        { 
+          text: "View Changes", 
+          onPress: () => navigation.navigate('Itinerary', { viewChanges: true })
+        },
+        {
+          text: "Later",
+          style: "cancel"
+        }
+      ]
+    );
+  };
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setShowFeedback(true);
+    }, 30000);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <ScrollView style={styles.container}>
@@ -45,6 +134,47 @@ const HomeScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Plan Together</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Collaborative Adventure</Text>
+          <Text style={styles.cardText}>
+            Create a joint itinerary with friends or family that balances everyone's preferences.
+          </Text>
+          <TouchableOpacity 
+            style={styles.button}
+            onPress={() => navigation.navigate('CollaborativeItinerary')}
+          >
+            <Text style={styles.buttonText}>Start Planning</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Future Plans</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Plan Ahead</Text>
+          <Text style={styles.cardText}>
+            Create itineraries for future dates that update as the day approaches.
+          </Text>
+          <TouchableOpacity 
+            style={styles.button}
+            onPress={() => navigation.navigate('FutureItinerary')}
+          >
+            <Text style={styles.buttonText}>Plan Future Trip</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <TouchableOpacity 
+          style={styles.updateButton}
+          onPress={simulateItineraryUpdate}
+        >
+          <Text style={styles.updateButtonText}>Simulate Itinerary Update</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Complete Your Profile</Text>
         <TouchableOpacity 
           style={styles.profileButton}
@@ -53,6 +183,21 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.profileButtonText}>Update Preferences</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={styles.section}>
+        <TouchableOpacity 
+          style={styles.feedbackButton}
+          onPress={() => setShowFeedback(true)}
+        >
+          <Text style={styles.feedbackButtonText}>Give Feedback</Text>
+        </TouchableOpacity>
+      </View>
+
+      <FeedbackPopup
+        visible={showFeedback}
+        onClose={() => setShowFeedback(false)}
+        onSubmit={updateUserFeedback}
+      />
     </ScrollView>
   );
 };
@@ -124,6 +269,26 @@ const styles = StyleSheet.create({
   },
   profileButtonText: {
     color: '#4a90e2',
+    fontWeight: 'bold',
+  },
+  feedbackButton: {
+    backgroundColor: '#5cb85c',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  feedbackButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  updateButton: {
+    backgroundColor: '#f0ad4e',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  updateButtonText: {
+    color: 'white',
     fontWeight: 'bold',
   },
 });
