@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'rea
 import { AuthContext } from '../context/AuthContext';
 import FeedbackPopup from '../components/FeedbackPopup';
 import { scheduleNotification, sendWelcomeNotification } from '../utils/notifications';
+import { getTimeBasedGreeting, shouldShowFeedback } from '../utils/homeScreenHelper';
 
 const HomeScreen = ({ navigation }) => {
-  const { user, preferences, updateSurveyData } = useContext(AuthContext);
+  const { user, preferences, updateSurveyData, surveyData } = useContext(AuthContext);
   
   const [showFeedback, setShowFeedback] = useState(false);
   const timerRef = useRef(null);
@@ -83,21 +84,30 @@ const HomeScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setShowFeedback(true);
-    }, 30000);
+    const lastFeedback = surveyData && surveyData.responses ? 
+      Object.values(surveyData.responses).sort((a, b) => 
+        new Date(b.timestamp) - new Date(a.timestamp)
+      )[0] : null;
+    
+    if (shouldShowFeedback(lastFeedback, 0.5)) {
+      timerRef.current = setInterval(() => {
+        setShowFeedback(true);
+      }, 30000);
+    }
 
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, []);
+  }, [surveyData]);
+
+  const greeting = getTimeBasedGreeting(user ? user.name : null);
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>Hello, {user ? user.name : 'Guest'}!</Text>
+        <Text style={styles.greeting}>{greeting}</Text>
         <Text style={styles.subtitle}>Ready for your next adventure?</Text>
       </View>
 
