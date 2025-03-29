@@ -1,6 +1,24 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const rateLimit = require('express-rate-limit');
+const { validationResult } = require('express-validator');
+
+/**
+ * Rate limiter for authentication routes to prevent brute force attacks
+ * Limits each IP to 5 login attempts per 15 minutes
+ */
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 requests per window
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: {
+    success: false,
+    message: 'Too many login attempts from this IP, please try again after 15 minutes'
+  },
+  skipSuccessfulRequests: false, // Don't count successful requests
+});
 
 /**
  * Hashes a password using bcrypt
@@ -9,8 +27,8 @@ const User = require('../models/User');
  */
 const hashPassword = async (password) => {
   try {
-    // Generate a salt with 10 rounds (recommended)
-    const salt = await bcrypt.genSalt(10);
+    // Generate a salt with 12 rounds (increased from 10 for better security)
+    const salt = await bcrypt.genSalt(12);
     // Hash the password with the generated salt
     const hashedPassword = await bcrypt.hash(password, salt);
     return hashedPassword;
@@ -61,6 +79,27 @@ const generateToken = (user) => {
 };
 
 /**
+ * Middleware to validate request inputs
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+const validateInputs = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      errors: errors.array().map(err => ({
+        field: err.param,
+        message: err.msg
+      }))
+    });
+  }
+  next();
+};
+
+/**
  * Middleware to authenticate requests using JWT
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -75,7 +114,7 @@ const authenticateToken = (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'No token provided, authorization denied'
+        message: 'Authentication required'
       });
     }
     
@@ -86,9 +125,16 @@ const authenticateToken = (req, res, next) => {
     jwt.verify(token, jwtSecret, (error, decoded) => {
       if (error) {
         // Token is invalid or expired
+        if (error.name === 'TokenExpiredError') {
+          return res.status(401).json({
+            success: false,
+            message: 'Token has expired, please login again'
+          });
+        }
+        
         return res.status(401).json({
           success: false,
-          message: 'Token is invalid or expired'
+          message: 'Invalid authentication token'
         });
       }
       
@@ -100,7 +146,7 @@ const authenticateToken = (req, res, next) => {
     console.error('Authentication error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error during authentication'
+      message: 'Authentication failed'
     });
   }
 };
@@ -130,7 +176,7 @@ const authorizeUser = async (req, res, next) => {
     console.error('Authorization error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error during authorization'
+      message: 'Authorization failed'
     });
   }
 };
@@ -148,26 +194,16 @@ const login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email and password'
+        message: 'Email and password are required'
       });
     }
     
     // Find user by email
     const user = await User.findOne({ email });
     
-    // Check if user exists
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-    
-    // Compare passwords
-    const isMatch = await comparePassword(password, user.password);
-    
-    // Check if passwords match
-    if (!isMatch) {
+    // Check if user exists and compare passwords
+    // Using a generic error message to prevent user enumeration
+    if (!user || !(await comparePassword(password, user.password))) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -181,20 +217,44 @@ const login = async (req, res) => {
     const userResponse = user.toObject();
     delete userResponse.password;
     
+    // Set token in HTTP-only cookie for added security
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    });
+    
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      token,
+      token, // Still include token in response for clients that need it
       data: userResponse
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error during login',
-      error: error.message
+      message: 'Login failed'
     });
   }
+};
+
+/**
+ * Logout function to clear the authentication token cookie
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const logout = (req, res) => {
+  res.cookie('token', '', {
+    httpOnly: true,
+    expires: new Date(0)
+  });
+  
+  res.status(200).json({
+    success: true,
+    message: 'Logged out successfully'
+  });
 };
 
 module.exports = {
@@ -203,5 +263,8 @@ module.exports = {
   generateToken,
   authenticateToken,
   authorizeUser,
-  login
+  login,
+  logout,
+  authLimiter,
+  validateInputs
 };

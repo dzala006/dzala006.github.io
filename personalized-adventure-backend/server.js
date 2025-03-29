@@ -7,6 +7,9 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const helmet = require('helmet');
+const xssClean = require('xss-clean');
+const hpp = require('hpp');
 
 // Import routes
 const indexRoutes = require('./routes/index');
@@ -17,10 +20,28 @@ const userRoutes = require('./routes/user');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Apply middleware
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// Apply security middleware
+// Set security HTTP headers
+app.use(helmet());
+
+// Apply CORS with more restrictive options for production
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.ALLOWED_ORIGINS?.split(',') || 'https://yourdomain.com' 
+    : '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
+}));
+
+// Parse JSON request body
+app.use(bodyParser.json({ limit: '10kb' })); // Limit body size
+app.use(bodyParser.urlencoded({ extended: true, limit: '10kb' }));
+
+// Data sanitization against XSS attacks
+app.use(xssClean());
+
+// Prevent parameter pollution
+app.use(hpp());
 
 // Use routes
 app.use('/', indexRoutes);
