@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import { scheduleNotification } from '../utils/notifications';
+import ChatRoom from '../components/ChatRoom';
 
 /**
  * CollaborativeItineraryScreen Component
@@ -31,6 +32,7 @@ const CollaborativeItineraryScreen = ({ navigation }) => {
   const [collaborativeItinerary, setCollaborativeItinerary] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [showContacts, setShowContacts] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   
   // Load user's contacts on component mount
   useEffect(() => {
@@ -452,7 +454,28 @@ const CollaborativeItineraryScreen = ({ navigation }) => {
           <View style={styles.partnerCard}>
             <Text style={styles.partnerName}>{partnerUser.name}</Text>
             <Text style={styles.partnerEmail}>{partnerUser.email}</Text>
+            
+            {/* Chat Button */}
+            <TouchableOpacity 
+              style={styles.chatButton}
+              onPress={() => setShowChat(true)}
+              accessibilityLabel="Open chat with partner"
+              accessibilityHint="Opens a chat window to discuss itinerary details with your partner"
+            >
+              <Text style={styles.chatButtonText}>Chat with Partner</Text>
+            </TouchableOpacity>
           </View>
+        </View>
+      )}
+      
+      {/* Chat Room Modal */}
+      {showChat && partnerUser && (
+        <View style={styles.chatContainer}>
+          <ChatRoom
+            roomId={`collab-${user.id}-${partnerUser.id}`}
+            collaboratorId={partnerUser.name}
+            onClose={() => setShowChat(false)}
+          />
         </View>
       )}
       
@@ -676,6 +699,27 @@ const styles = StyleSheet.create({
   partnerEmail: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 10,
+  },
+  chatButton: {
+    backgroundColor: '#4a90e2',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  chatButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  chatContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'white',
+    zIndex: 1000,
   },
   preferencesCard: {
     backgroundColor: 'white',
