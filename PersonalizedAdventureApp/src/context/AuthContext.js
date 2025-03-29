@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as apiService from '../utils/apiService';
 import { isAuthenticated, getToken, parseToken, removeToken } from '../utils/tokenStorage';
+import { setUser as setSentryUser, clearUser as clearSentryUser, trackUserLogin, trackUserRegistration } from '../utils/analytics';
 
 // Create the Authentication Context
 export const AuthContext = createContext();
@@ -48,12 +49,20 @@ export const AuthProvider = ({ children }) => {
               const userData = await apiService.get(`/users/${tokenData.user.id}`);
               if (userData && userData.data) {
                 setUser(userData.data);
+                
+                // Set user in Sentry for error tracking
+                setSentryUser({
+                  id: userData.data.id,
+                  username: userData.data.name,
+                  email: userData.data.email
+                });
               }
             } catch (error) {
               console.error('Failed to fetch user data from API', error);
               // Token might be invalid, remove it
               await removeToken();
               setAuthToken(null);
+              clearSentryUser();
             }
           }
         }
@@ -116,6 +125,17 @@ export const AuthProvider = ({ children }) => {
         // Get the token after successful login
         const token = await getToken();
         setAuthToken(token);
+        
+        // Track login event in analytics
+        trackUserLogin();
+        
+        // Set user in Sentry for error tracking
+        setSentryUser({
+          id: result.user.id,
+          username: result.user.name,
+          email: result.user.email
+        });
+        
         return { success: true };
       } else {
         return { success: false, error: result.error || 'Login failed' };
@@ -139,6 +159,20 @@ export const AuthProvider = ({ children }) => {
         // Get the token after successful registration
         const token = await getToken();
         setAuthToken(token);
+        
+        // Track registration event in analytics
+        trackUserRegistration({
+          hasCompletedSurvey: false,
+          preferences: preferences
+        });
+        
+        // Set user in Sentry for error tracking
+        setSentryUser({
+          id: result.user.id,
+          username: result.user.name,
+          email: result.user.email
+        });
+        
         return { success: true };
       } else {
         return { success: false, error: result.error || 'Registration failed' };
@@ -161,6 +195,10 @@ export const AuthProvider = ({ children }) => {
         // Clear user data
         setUser(null);
         setAuthToken(null);
+        
+        // Clear user from Sentry
+        clearSentryUser();
+        
         return { success: true };
       } else {
         return { success: false, error: result.error || 'Logout failed' };

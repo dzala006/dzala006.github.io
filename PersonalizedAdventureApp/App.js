@@ -22,6 +22,10 @@ import { colors, typography } from './src/theme/theme';
 // Import utilities
 import { initializeRealTimeUpdates, UPDATE_METHODS } from './src/utils/realTimeUpdates';
 import { addNotificationResponseListener } from './src/utils/notifications';
+import { initializeSentry } from './src/utils/analytics';
+
+// Initialize Sentry
+initializeSentry();
 
 // Create stack navigator
 const Stack = createStackNavigator();

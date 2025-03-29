@@ -13,6 +13,7 @@ import { AuthContext } from '../context/AuthContext';
 import styles from './FeedbackPopup.styled';
 import { Typography, Button } from './common';
 import { colors } from '../theme/theme';
+import { trackFeedbackSubmission } from '../utils/analytics';
 
 /**
  * FeedbackPopup Component
@@ -31,6 +32,7 @@ const FeedbackPopup = ({ visible, onClose, onSubmit }) => {
   const [currentQuestion, setCurrentQuestion] = useState({});
   const [error, setError] = useState('');
   const [selectedOption, setSelectedOption] = useState(null);
+  const [startTime, setStartTime] = useState(null);
   
   // Animation values
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -116,6 +118,7 @@ const FeedbackPopup = ({ visible, onClose, onSubmit }) => {
       setResponse('');
       setSelectedOption(null);
       setError('');
+      setStartTime(Date.now());
       
       // Start animations
       Animated.parallel([
@@ -154,13 +157,17 @@ const FeedbackPopup = ({ visible, onClose, onSubmit }) => {
     // Clear error if validation passes
     setError('');
     
+    // Calculate response time
+    const responseTime = Date.now() - startTime;
+    
     // Prepare feedback data
     const feedbackData = {
       questionId: currentQuestion.id,
       question: currentQuestion.question,
       response: currentQuestion.type === 'options' ? currentQuestion.options[selectedOption] : response,
       context: currentQuestion.context,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      responseTime: responseTime
     };
     
     // Update survey data in context
@@ -168,6 +175,15 @@ const FeedbackPopup = ({ visible, onClose, onSubmit }) => {
       responses: {
         [currentQuestion.id]: feedbackData
       }
+    });
+    
+    // Track feedback submission in analytics
+    trackFeedbackSubmission({
+      questionType: currentQuestion.context,
+      responseTime: responseTime,
+      questionId: currentQuestion.id,
+      responseType: currentQuestion.type,
+      hasResponse: currentQuestion.type === 'options' ? selectedOption !== null : response.trim().length > 0
     });
     
     // Call onSubmit callback if provided
