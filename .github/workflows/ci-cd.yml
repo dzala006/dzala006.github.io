@@ -21,8 +21,7 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '16'
-          cache: 'npm'
-          cache-dependency-path: 'personalized-adventure-backend/package-lock.json'
+          # No cache specified since package-lock.json doesn't exist
       
       - name: Install backend dependencies
         run: |
@@ -51,8 +50,7 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '16'
-          cache: 'npm'
-          cache-dependency-path: 'PersonalizedAdventureApp/package-lock.json'
+          # No cache specified since package-lock.json doesn't exist
       
       - name: Install Expo CLI
         run: npm install -g expo-cli@6.3.10
@@ -128,8 +126,7 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '16'
-          cache: 'npm'
-          cache-dependency-path: 'PersonalizedAdventureApp/package-lock.json'
+          # No cache specified since package-lock.json doesn't exist
       
       - name: Install Expo CLI
         run: npm install -g expo-cli@6.3.10
