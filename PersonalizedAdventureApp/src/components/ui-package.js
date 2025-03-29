@@ -28,6 +28,7 @@ export {
 // Export enhanced components
 export { default as FeedbackPopup } from './FeedbackPopup';
 export { default as SocialShareButton } from './SocialShareButton';
+export { default as GamificationDashboard } from './GamificationDashboard';
 
 /**
  * Usage Guide:
@@ -40,7 +41,7 @@ export { default as SocialShareButton } from './SocialShareButton';
  *   colors, typography, spacing, 
  *   
  *   // UI components
- *   Button, Card, Container, Typography, FeedbackPopup, SocialShareButton 
+ *   Button, Card, Container, Typography, FeedbackPopup, SocialShareButton, GamificationDashboard 
  * } from '../components/ui-package';
  * 
  * // Then use them in your component
