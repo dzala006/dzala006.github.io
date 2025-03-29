@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { AuthContext } from '../context/AuthContext';
 import { useWebSocket, usePolling, fetchItineraryUpdates, UPDATE_TYPES } from '../utils/realTimeUpdates';
 import { scheduleNotification } from '../utils/notifications';
+import SocialShareButton from '../components/SocialShareButton';
 
 const ItineraryScreen = ({ navigation, route }) => {
   const { user, preferences } = useContext(AuthContext);
@@ -444,12 +445,24 @@ const ItineraryScreen = ({ navigation, route }) => {
             >
               <Text style={styles.actionButtonText}>Save Itinerary</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.secondaryButton]}
-              onPress={() => navigation.navigate('Profile')}
-            >
-              <Text style={styles.secondaryButtonText}>Modify Preferences</Text>
-            </TouchableOpacity>
+            
+            <SocialShareButton
+              title={itinerary.title}
+              message={`Check out my personalized itinerary for ${itinerary.location} from ${itinerary.startDate} to ${itinerary.endDate}! It includes ${itinerary.days.reduce((total, day) => total + day.activities.length, 0)} activities with a total cost of $${itinerary.totalCost}.`}
+              variant="secondary"
+              buttonText="Share"
+              style={styles.shareButton}
+              accessibilityLabel="Share itinerary"
+              accessibilityHint="Share your itinerary on social media"
+              onShareComplete={() => {
+                scheduleNotification({
+                  title: 'Itinerary Shared',
+                  message: 'Your itinerary has been shared successfully!',
+                  data: { screen: 'Itinerary' },
+                  triggerTime: 1
+                });
+              }}
+            />
           </View>
           
           <TouchableOpacity 
@@ -723,6 +736,10 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  shareButton: {
+    flex: 1,
+    marginLeft: 10,
   },
   secondaryButton: {
     backgroundColor: 'white',

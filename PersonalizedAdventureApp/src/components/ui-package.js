@@ -27,6 +27,7 @@ export {
 
 // Export enhanced components
 export { default as FeedbackPopup } from './FeedbackPopup';
+export { default as SocialShareButton } from './SocialShareButton';
 
 /**
  * Usage Guide:
@@ -39,7 +40,7 @@ export { default as FeedbackPopup } from './FeedbackPopup';
  *   colors, typography, spacing, 
  *   
  *   // UI components
- *   Button, Card, Container, Typography, FeedbackPopup 
+ *   Button, Card, Container, Typography, FeedbackPopup, SocialShareButton 
  * } from '../components/ui-package';
  * 
  * // Then use them in your component
@@ -56,6 +57,12 @@ export { default as FeedbackPopup } from './FeedbackPopup';
  *         label="Get Started" 
  *         variant="primary"
  *         onPress={() => console.log('Button pressed')}
+ *       />
+ *       <SocialShareButton
+ *         title="My Adventure"
+ *         message="Check out my personalized adventure!"
+ *         variant="secondary"
+ *         buttonText="Share"
  *       />
  *     </Card>
  *   </Container>

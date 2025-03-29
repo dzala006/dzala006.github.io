@@ -168,6 +168,75 @@ const [showFeedback, setShowFeedback] = useState(false);
 />
 ```
 
+### SocialShareButton
+
+A button component that enables users to share itinerary details on social media using the native share dialog.
+
+```jsx
+import { SocialShareButton } from '../components/ui-package';
+
+// Basic usage
+<SocialShareButton
+  title="Weekend in San Francisco"
+  message="Check out my personalized itinerary for San Francisco!"
+  onShareComplete={(result) => console.log('Shared successfully', result)}
+/>
+
+// With URL
+<SocialShareButton
+  title="My Adventure"
+  message="Join me on this adventure!"
+  url="https://personalizedadventure.com/itinerary/123"
+  buttonText="Share Itinerary"
+/>
+
+// Different variants
+<SocialShareButton
+  title="My Adventure"
+  message="Check out my adventure!"
+  variant="primary"
+/>
+
+<SocialShareButton
+  title="My Adventure"
+  message="Check out my adventure!"
+  variant="secondary"
+/>
+
+<SocialShareButton
+  title="My Adventure"
+  message="Check out my adventure!"
+  variant="outline"
+/>
+
+// Different sizes
+<SocialShareButton
+  title="My Adventure"
+  message="Check out my adventure!"
+  size="small"
+/>
+
+<SocialShareButton
+  title="My Adventure"
+  message="Check out my adventure!"
+  size="medium"
+/>
+
+<SocialShareButton
+  title="My Adventure"
+  message="Check out my adventure!"
+  size="large"
+/>
+
+// With accessibility
+<SocialShareButton
+  title="My Adventure"
+  message="Check out my adventure!"
+  accessibilityLabel="Share your adventure"
+  accessibilityHint="Opens the share dialog to share your adventure on social media"
+/>
+```
+
 ## Accessibility Features
 
 All components include proper accessibility support:
