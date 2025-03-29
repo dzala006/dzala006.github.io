@@ -27,7 +27,7 @@ jobs:
       - name: Install backend dependencies
         run: |
           cd personalized-adventure-backend
-          npm ci
+          npm install
       
       - name: Run backend tests
         run: |
@@ -55,17 +55,17 @@ jobs:
           cache-dependency-path: 'PersonalizedAdventureApp/package-lock.json'
       
       - name: Install Expo CLI
-        run: npm install -g expo-cli
+        run: npm install -g expo-cli@6.3.10
       
       - name: Install frontend dependencies
         run: |
           cd PersonalizedAdventureApp
-          npm ci
+          npm install
       
       - name: Build Expo app
         run: |
           cd PersonalizedAdventureApp
-          expo build:web
+          npx expo export:web
         env:
           # Use GitHub secrets for API keys
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -132,15 +132,18 @@ jobs:
           cache-dependency-path: 'PersonalizedAdventureApp/package-lock.json'
       
       - name: Install Expo CLI
-        run: npm install -g expo-cli
+        run: npm install -g expo-cli@6.3.10
       
-      - name: Login to Expo
-        run: expo login -u ${{ secrets.EXPO_USERNAME }} -p ${{ secrets.EXPO_PASSWORD }}
+      - name: Install frontend dependencies
+        run: |
+          cd PersonalizedAdventureApp
+          npm install
       
       - name: Publish to Expo
         run: |
           cd PersonalizedAdventureApp
-          expo publish --release-channel production
+          # Use npx to ensure we're using the installed version
+          npx expo publish --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       
