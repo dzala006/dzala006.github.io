@@ -10,13 +10,12 @@
 // Note: You'll need to install this package with: npm install @tensorflow/tfjs
 import * as tf from '@tensorflow/tfjs';
 
+// Import preprocessor and postprocessor modules
+import { preprocessDataForModel } from './aiPreprocessor';
+import { postProcessModelOutput } from './aiPostprocessor';
+
 // Import helper functions from separate files to keep code organized
-import { 
-  preprocessDataForModel, 
-  postProcessModelOutput, 
-  generateUniqueId,
-  generateItineraryTitle
-} from './aiPersonalizationHelpers';
+import { generateUniqueId, generateItineraryTitle } from './aiPersonalizationHelpers';
 
 // Import the fallback rule-based approach
 import { generateRuleBasedItinerary } from './aiPersonalizationRuleBased';
