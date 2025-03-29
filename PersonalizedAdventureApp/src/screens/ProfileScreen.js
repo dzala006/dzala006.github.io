@@ -10,15 +10,17 @@ import {
   Alert
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
+import { GamificationDashboard } from '../components/ui-package';
 
 const ProfileScreen = ({ navigation }) => {
   const { user, preferences, updatePreferences, logout } = useContext(AuthContext);
   
-  // Local state for form values
+  // Local state for form values and UI state
   const [formValues, setFormValues] = useState({
     ...preferences
   });
-
+  const [showAchievements, setShowAchievements] = useState(false);
+  
   // Activity type options
   const activityTypes = [
     'Sightseeing',
@@ -145,6 +147,22 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
+  // Toggle achievements dashboard
+  const toggleAchievements = () => {
+    setShowAchievements(!showAchievements);
+  };
+
+  // If achievements dashboard is shown, render it
+  if (showAchievements) {
+    return (
+      <GamificationDashboard 
+        onClose={toggleAchievements}
+        style={styles.achievementsDashboard}
+      />
+    );
+  }
+
+  // Otherwise render the profile screen
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -159,6 +177,17 @@ const ProfileScreen = ({ navigation }) => {
           <Text style={styles.userEmail}>{user ? user.email : 'Not logged in'}</Text>
         </View>
       </View>
+
+      {/* Achievements Section */}
+      <TouchableOpacity 
+        style={styles.achievementsButton}
+        onPress={toggleAchievements}
+        accessibilityLabel="View your achievements"
+        accessibilityRole="button"
+        accessibilityHint="Opens the achievements dashboard"
+      >
+        <Text style={styles.achievementsButtonText}>View Your Achievements</Text>
+      </TouchableOpacity>
 
       {/* Activity Preferences Section */}
       <View style={styles.section}>
@@ -502,6 +531,27 @@ const styles = StyleSheet.create({
     color: '#ff6b6b',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  achievementsButton: {
+    backgroundColor: '#4CC9F0',
+    margin: 15,
+    marginBottom: 15,
+    borderRadius: 10,
+    padding: 15,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  achievementsButtonText: {
+    color: '#000000',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  achievementsDashboard: {
+    margin: 10,
   },
 });
 
