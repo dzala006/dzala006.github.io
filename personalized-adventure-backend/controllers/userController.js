@@ -11,13 +11,7 @@ exports.createUser = async (req, res) => {
   try {
     const { username, email, password, preferences } = req.body;
     
-    // Validate required fields
-    if (!username || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide all required fields: username, email, password'
-      });
-    }
+    // Validation is now handled by express-validator middleware
     
     // Check if user already exists
     const existingUser = await User.findOne({ 
@@ -55,10 +49,11 @@ exports.createUser = async (req, res) => {
       data: userResponse
     });
   } catch (error) {
+    console.error('Error creating user:', error);
+    // Don't expose detailed error messages in production
     res.status(500).json({
       success: false,
-      message: 'Error creating user',
-      error: error.message
+      message: 'Failed to create user'
     });
   }
 };
@@ -79,10 +74,10 @@ exports.getAllUsers = async (req, res) => {
       data: users
     });
   } catch (error) {
+    console.error('Error retrieving users:', error);
     res.status(500).json({
       success: false,
-      message: 'Error retrieving users',
-      error: error.message
+      message: 'Failed to retrieve users'
     });
   }
 };
@@ -120,10 +115,10 @@ exports.getUser = async (req, res) => {
       data: user
     });
   } catch (error) {
+    console.error('Error retrieving user:', error);
     res.status(500).json({
       success: false,
-      message: 'Error retrieving user',
-      error: error.message
+      message: 'Failed to retrieve user'
     });
   }
 };
@@ -173,10 +168,10 @@ exports.updateUser = async (req, res) => {
       data: updatedUser
     });
   } catch (error) {
+    console.error('Error updating user:', error);
     res.status(500).json({
       success: false,
-      message: 'Error updating user',
-      error: error.message
+      message: 'Failed to update user'
     });
   }
 };
@@ -214,10 +209,10 @@ exports.deleteUser = async (req, res) => {
       message: 'User deleted successfully'
     });
   } catch (error) {
+    console.error('Error deleting user:', error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting user',
-      error: error.message
+      message: 'Failed to delete user'
     });
   }
 };
