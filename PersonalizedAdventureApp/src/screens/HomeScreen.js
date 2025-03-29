@@ -5,9 +5,12 @@ import FeedbackPopup from '../components/FeedbackPopup';
 import { scheduleNotification, sendWelcomeNotification } from '../utils/notifications';
 import { getTimeBasedGreeting, shouldShowFeedback } from '../utils/homeScreenHelper';
 import { useWebSocket, UPDATE_TYPES } from '../utils/realTimeUpdates';
+import { useTranslation } from 'react-i18next';
+import '../utils/i18n';
 
 const HomeScreen = ({ navigation }) => {
   const { user, preferences, updateSurveyData, surveyData } = useContext(AuthContext);
+  const { t } = useTranslation();
   
   const [showFeedback, setShowFeedback] = useState(false);
   const [recentUpdates, setRecentUpdates] = useState([]);
@@ -43,11 +46,11 @@ const HomeScreen = ({ navigation }) => {
 
   const handleWeatherUpdate = (weatherData) => {
     Alert.alert(
-      "Weather Update",
-      `${weatherData.forecast} Some activities may be affected.`,
+      t('home.weatherUpdate'),
+      `${weatherData.forecast} ${t('itinerary.weatherAffectedActivities')}`,
       [
         {
-          text: "View Itinerary",
+          text: t('itinerary.viewChanges'),
           onPress: () => {
             navigation.navigate('Itinerary', { 
               weatherUpdate: true, 
@@ -56,7 +59,7 @@ const HomeScreen = ({ navigation }) => {
           }
         },
         {
-          text: "Later",
+          text: t('common.later'),
           style: "cancel"
         }
       ]
@@ -65,11 +68,11 @@ const HomeScreen = ({ navigation }) => {
   
   const handleEventUpdate = (eventData) => {
     Alert.alert(
-      "New Event Nearby",
+      t('home.newEvent'),
       `${eventData.eventName} at ${eventData.location}\n${eventData.description}`,
       [
         {
-          text: "View Details",
+          text: t('home.viewDetails'),
           onPress: () => {
             navigation.navigate('Itinerary', { 
               newEvent: eventData
@@ -77,7 +80,7 @@ const HomeScreen = ({ navigation }) => {
           }
         },
         {
-          text: "Later",
+          text: t('common.later'),
           style: "cancel"
         }
       ]
@@ -86,11 +89,11 @@ const HomeScreen = ({ navigation }) => {
   
   const handleReservationUpdate = (reservationData) => {
     Alert.alert(
-      "Reservation Update",
+      t('home.reservationUpdate'),
       reservationData.notes,
       [
         {
-          text: "View Details",
+          text: t('home.viewDetails'),
           onPress: () => {
             navigation.navigate('Itinerary', { 
               reservationUpdate: reservationData
@@ -98,7 +101,7 @@ const HomeScreen = ({ navigation }) => {
           }
         },
         {
-          text: "OK",
+          text: t('common.ok'),
           style: "default"
         }
       ]
@@ -118,28 +121,28 @@ const HomeScreen = ({ navigation }) => {
     });
 
     scheduleNotification({
-      title: 'Preferences Updated',
-      message: 'Your adventure preferences have been updated based on your feedback.',
+      title: t('notifications.feedbackApplied'),
+      message: t('feedback.feedbackApplied'),
       data: { screen: 'Profile' },
       triggerTime: 2
     });
 
     Alert.alert(
-      "Feedback Applied",
-      "Your preferences have been updated. Would you like to regenerate your itinerary?",
+      t('feedback.feedbackApplied'),
+      t('feedback.regenerateQuestion'),
       [
         {
-          text: "Not Now",
+          text: t('common.no'),
           style: "cancel"
         },
         { 
-          text: "Yes", 
+          text: t('common.yes'), 
           onPress: () => {
             navigation.navigate('Itinerary', { regenerate: true });
             
             scheduleNotification({
-              title: 'Itinerary Regenerated',
-              message: 'Your itinerary has been updated based on your new preferences.',
+              title: t('itinerary.regenerateSuccess'),
+              message: t('itinerary.regenerateSuccess'),
               data: { screen: 'Itinerary', params: { regenerate: true } },
               triggerTime: 5
             });
@@ -151,22 +154,22 @@ const HomeScreen = ({ navigation }) => {
 
   const simulateItineraryUpdate = () => {
     scheduleNotification({
-      title: 'Itinerary Update',
-      message: 'Weather alert: We\'ve adjusted your afternoon activities due to expected rain.',
+      title: t('notifications.itineraryUpdated'),
+      message: t('notifications.weatherChange'),
       data: { screen: 'Itinerary', params: { viewChanges: true } },
       triggerTime: null
     });
 
     Alert.alert(
-      "Itinerary Updated",
-      "We've adjusted your afternoon activities due to expected rain. Check your itinerary for details.",
+      t('itinerary.itineraryUpdated'),
+      t('itinerary.weatherAffectedActivities'),
       [
         { 
-          text: "View Changes", 
+          text: t('itinerary.viewChanges'), 
           onPress: () => navigation.navigate('Itinerary', { viewChanges: true })
         },
         {
-          text: "Later",
+          text: t('common.later'),
           style: "cancel"
         }
       ]
@@ -201,23 +204,23 @@ const HomeScreen = ({ navigation }) => {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Updates</Text>
+        <Text style={styles.sectionTitle}>{t('home.recentUpdates')}</Text>
         {recentUpdates.map((update, index) => {
           let title, description, onPress;
           
           if (update.type === UPDATE_TYPES.WEATHER) {
-            title = "Weather Update";
+            title = t('home.weatherUpdate');
             description = update.data.forecast;
             onPress = () => navigation.navigate('Itinerary', { 
               weatherUpdate: true, 
               affectedActivities: update.data.affectedActivities 
             });
           } else if (update.type === UPDATE_TYPES.EVENT) {
-            title = "New Event";
+            title = t('home.newEvent');
             description = `${update.data.eventName} at ${update.data.location}`;
             onPress = () => navigation.navigate('Itinerary', { newEvent: update.data });
           } else if (update.type === UPDATE_TYPES.RESERVATION) {
-            title = "Reservation Update";
+            title = t('home.reservationUpdate');
             description = update.data.notes;
             onPress = () => navigation.navigate('Itinerary', { reservationUpdate: update.data });
           }
@@ -227,10 +230,13 @@ const HomeScreen = ({ navigation }) => {
               key={`update-${index}`} 
               style={styles.updateCard}
               onPress={onPress}
+              accessible={true}
+              accessibilityLabel={`${title}: ${description}`}
+              accessibilityHint={t('home.viewDetails')}
             >
               <Text style={styles.updateTitle}>{title}</Text>
               <Text style={styles.updateDescription}>{description}</Text>
-              <Text style={styles.updateTime}>Just now</Text>
+              <Text style={styles.updateTime}>{t('home.justNow')}</Text>
             </TouchableOpacity>
           );
         })}
@@ -242,11 +248,11 @@ const HomeScreen = ({ navigation }) => {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.greeting}>{greeting}</Text>
-        <Text style={styles.subtitle}>Ready for your next adventure?</Text>
+        <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
         {wsConnected && (
           <View style={styles.liveIndicator}>
             <View style={styles.liveIndicatorDot} />
-            <Text style={styles.liveIndicatorText}>Live Updates</Text>
+            <Text style={styles.liveIndicatorText}>{t('home.liveUpdates')}</Text>
           </View>
         )}
       </View>
@@ -254,65 +260,77 @@ const HomeScreen = ({ navigation }) => {
       {renderRecentUpdates()}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Upcoming Adventures</Text>
+        <Text style={styles.sectionTitle}>{t('home.upcomingAdventures')}</Text>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>No upcoming adventures</Text>
+          <Text style={styles.cardTitle}>{t('home.noUpcomingAdventures')}</Text>
           <Text style={styles.cardText}>
-            Create your first personalized itinerary to get started!
+            {t('home.createFirstItinerary')}
           </Text>
           <TouchableOpacity 
             style={styles.button}
             onPress={() => navigation.navigate('Itinerary')}
+            accessible={true}
+            accessibilityLabel={t('home.createItinerary')}
+            accessibilityHint={t('home.createFirstItinerary')}
           >
-            <Text style={styles.buttonText}>Create Itinerary</Text>
+            <Text style={styles.buttonText}>{t('home.createItinerary')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recommended For You</Text>
+        <Text style={styles.sectionTitle}>{t('home.recommendedForYou')}</Text>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Weekend Getaway</Text>
+          <Text style={styles.cardTitle}>{t('home.weekendGetaway')}</Text>
           <Text style={styles.cardText}>
-            Based on your preferences, we've curated a perfect weekend escape.
+            {t('home.weekendGetawayDesc')}
           </Text>
           <TouchableOpacity 
             style={styles.button}
             onPress={() => navigation.navigate('Itinerary')}
+            accessible={true}
+            accessibilityLabel={t('home.viewDetails')}
+            accessibilityHint={t('home.weekendGetawayDesc')}
           >
-            <Text style={styles.buttonText}>View Details</Text>
+            <Text style={styles.buttonText}>{t('home.viewDetails')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Plan Together</Text>
+        <Text style={styles.sectionTitle}>{t('home.planTogether')}</Text>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Collaborative Adventure</Text>
+          <Text style={styles.cardTitle}>{t('home.collaborativeAdventure')}</Text>
           <Text style={styles.cardText}>
-            Create a joint itinerary with friends or family that balances everyone's preferences.
+            {t('home.collaborativeAdventureDesc')}
           </Text>
           <TouchableOpacity 
             style={styles.button}
             onPress={() => navigation.navigate('CollaborativeItinerary')}
+            accessible={true}
+            accessibilityLabel={t('home.startPlanning')}
+            accessibilityHint={t('home.collaborativeAdventureDesc')}
           >
-            <Text style={styles.buttonText}>Start Planning</Text>
+            <Text style={styles.buttonText}>{t('home.startPlanning')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Future Plans</Text>
+        <Text style={styles.sectionTitle}>{t('home.futurePlans')}</Text>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Plan Ahead</Text>
+          <Text style={styles.cardTitle}>{t('home.planAhead')}</Text>
           <Text style={styles.cardText}>
-            Create itineraries for future dates that update as the day approaches.
+            {t('home.planAheadDesc')}
           </Text>
           <TouchableOpacity 
             style={styles.button}
             onPress={() => navigation.navigate('FutureItinerary')}
+            accessible={true}
+            accessibilityLabel={t('home.planFutureTrip')}
+            accessibilityHint={t('home.planAheadDesc')}
           >
-            <Text style={styles.buttonText}>Plan Future Trip</Text>
+            <Text style={styles.buttonText}>{t('home.planFutureTrip')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -321,18 +339,24 @@ const HomeScreen = ({ navigation }) => {
         <TouchableOpacity 
           style={styles.updateButton}
           onPress={simulateItineraryUpdate}
+          accessible={true}
+          accessibilityLabel={t('home.simulateUpdate')}
+          accessibilityHint={t('notifications.weatherChange')}
         >
-          <Text style={styles.updateButtonText}>Simulate Itinerary Update</Text>
+          <Text style={styles.updateButtonText}>{t('home.simulateUpdate')}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Complete Your Profile</Text>
+        <Text style={styles.sectionTitle}>{t('home.completeProfile')}</Text>
         <TouchableOpacity 
           style={styles.profileButton}
           onPress={() => navigation.navigate('Profile')}
+          accessible={true}
+          accessibilityLabel={t('home.updatePreferences')}
+          accessibilityHint={t('profile.preferencesUpdated')}
         >
-          <Text style={styles.profileButtonText}>Update Preferences</Text>
+          <Text style={styles.profileButtonText}>{t('home.updatePreferences')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -340,8 +364,11 @@ const HomeScreen = ({ navigation }) => {
         <TouchableOpacity 
           style={styles.feedbackButton}
           onPress={() => setShowFeedback(true)}
+          accessible={true}
+          accessibilityLabel={t('home.giveFeedback')}
+          accessibilityHint={t('feedback.title')}
         >
-          <Text style={styles.feedbackButtonText}>Give Feedback</Text>
+          <Text style={styles.feedbackButtonText}>{t('home.giveFeedback')}</Text>
         </TouchableOpacity>
       </View>
 
