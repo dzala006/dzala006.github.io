@@ -21,6 +21,17 @@ import {
 // Import the fallback rule-based approach
 import { generateRuleBasedItinerary } from './aiPersonalizationRuleBased';
 
+// Import enhanced data integration utilities
+import {
+  fetchMultipleApiData,
+  fetchCrowdsourcedData,
+  getUserLocation,
+  applyContextualFilters,
+  predictTrendingActivities,
+  formatDataForMap,
+  applyUserPreferenceFilters
+} from './enhancedDataIntegration';
+
 /**
  * Loads the TensorFlow.js model from a local file or URL
  * 
@@ -28,8 +39,6 @@ import { generateRuleBasedItinerary } from './aiPersonalizationRuleBased';
  */
 const loadTensorFlowModel = async () => {
   try {
-    // In a production environment, you would load from a real model URL
-    // For this example, we're simulating the model loading
     console.log('Loading TensorFlow.js model...');
     
     // Simulate model loading delay
@@ -39,9 +48,9 @@ const loadTensorFlowModel = async () => {
     // In production, you would use: return await tf.loadLayersModel('path/to/model.json');
     const model = tf.sequential();
     
-    // Input shape: [user preferences (10), feedback data (5), weather data (3), events data (5)]
+    // Input shape: [user preferences (10), feedback data (5), weather data (3), events data (5), enhanced data (10)]
     model.add(tf.layers.dense({
-      inputShape: [23],
+      inputShape: [33],
       units: 64,
       activation: 'relu'
     }));
@@ -182,7 +191,7 @@ const runModelInference = async (model, preprocessedData) => {
  */
 export const generateDynamicItinerary = async (userData, feedbackData, weatherData, eventsData) => {
   try {
-    console.log('Generating personalized itinerary with TensorFlow.js AI model...');
+    console.log('Generating personalized itinerary with TensorFlow.js AI model and enhanced data integration...');
     
     // Validate input parameters
     if (!userData || !userData.preferences) {
@@ -204,21 +213,120 @@ export const generateDynamicItinerary = async (userData, feedbackData, weatherDa
       eventsData = { events: [] };
     }
     
-    // 1. Load the TensorFlow.js model
+    // 1. Get user's current location
+    const userLocation = await getUserLocation();
+    console.log('Got user location:', userLocation);
+    
+    // 2. Fetch enriched data from multiple external APIs
+    const apiParams = {
+      latitude: userLocation.latitude,
+      longitude: userLocation.longitude,
+      radius: 5000, // 5km radius
+      location: 'Current Location',
+      date: new Date().toISOString().split('T')[0]
+    };
+    
+    const apiData = await fetchMultipleApiData(apiParams, ['yelp', 'eventbrite', 'openTable', 'viator']);
+    console.log('Fetched data from multiple APIs');
+    
+    // 3. Fetch crowdsourced data
+    const crowdsourcedData = await fetchCrowdsourcedData({
+      latitude: userLocation.latitude,
+      longitude: userLocation.longitude,
+      radius: 5000
+    });
+    console.log('Fetched crowdsourced data');
+    
+    // 4. Apply contextual filters based on time, weather, and user location
+    const contextualFilters = {
+      time: {
+        hour: new Date().getHours(),
+        isWeekend: [0, 6].includes(new Date().getDay())
+      },
+      weather: weatherData.forecast[0],
+      location: userLocation,
+      preferences: userData.preferences
+    };
+    
+    // Combine all activities from different sources
+    const allActivities = [
+      ...(apiData.yelp || []),
+      ...(apiData.eventbrite || []),
+      ...(apiData.viator || []),
+      ...(crowdsourcedData.trending_places || [])
+    ];
+    
+    // Apply contextual filters
+    const filteredActivities = await applyContextualFilters(allActivities, contextualFilters);
+    console.log(`Applied contextual filters, ${filteredActivities.length} activities remaining`);
+    
+    // 5. Use ML to predict trending activities and high-demand reservations
+    const trendingPredictions = await predictTrendingActivities(
+      filteredActivities,
+      userData,
+      contextualFilters.time
+    );
+    console.log(`Identified ${trendingPredictions.trending_activities.length} trending activities`);
+    
+    // 6. Apply user preference filters
+    const userPreferenceFilters = {
+      ...userData.preferences,
+      userLocation: userLocation,
+      maxDistance: 5000 // 5km max distance
+    };
+    
+    const personalizedActivities = applyUserPreferenceFilters(filteredActivities, userPreferenceFilters);
+    console.log(`Applied user preference filters, ${personalizedActivities.length} activities remaining`);
+    
+    // 7. Enhance eventsData with trending activities
+    const enhancedEventsData = {
+      events: [
+        ...(eventsData.events || []),
+        ...trendingPredictions.trending_activities.map(activity => ({
+          name: activity.name,
+          location: 'Nearby',
+          date: new Date().toISOString().split('T')[0],
+          category: activity.category || 'trending',
+          cost: activity.price?.amount || 0,
+          trending: true,
+          trending_score: activity.trending_score
+        }))
+      ]
+    };
+    
+    // 8. Load the TensorFlow.js model
     const model = await loadTensorFlowModel();
     console.log('TensorFlow model loaded successfully');
     
-    // 2. Preprocess the input data for the model
-    const preprocessedData = preprocessDataForModel(userData, feedbackData, weatherData, eventsData);
+    // 9. Preprocess the input data for the model, including enhanced data
+    const enhancedUserData = {
+      ...userData,
+      enhancedData: {
+        nearbyActivities: personalizedActivities,
+        trendingActivities: trendingPredictions.trending_activities,
+        userLocation: userLocation
+      }
+    };
+    
+    const preprocessedData = preprocessDataForModel(enhancedUserData, feedbackData, weatherData, enhancedEventsData);
     console.log('Data preprocessed for model inference');
     
-    // 3. Run inference with the model
+    // 10. Run inference with the model
     const modelPredictions = await runModelInference(model, preprocessedData);
     console.log('Model inference completed successfully');
     
-    // 4. Post-process the model output into a structured itinerary
-    const itinerary = postProcessModelOutput(modelPredictions, userData, weatherData, eventsData);
+    // 11. Post-process the model output into a structured itinerary
+    const itinerary = postProcessModelOutput(
+      modelPredictions, 
+      enhancedUserData, 
+      weatherData, 
+      enhancedEventsData
+    );
     console.log(`Generated itinerary with ${itinerary.days.length} days and ${itinerary.days.reduce((sum, day) => sum + day.activities.length, 0)} activities`);
+    
+    // 12. Format map data for the itinerary
+    itinerary.mapData = formatDataForMap(personalizedActivities);
+    console.log('Added map data to itinerary');
     
     return itinerary;
   } catch (error) {
