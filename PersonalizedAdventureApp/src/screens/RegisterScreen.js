@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -12,40 +12,51 @@ import {
   Alert
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
+import { isAuthenticated } from '../utils/tokenStorage';
 
 const RegisterScreen = ({ navigation }) => {
-  const { register } = useContext(AuthContext);
+  const { register, isLoading } = useContext(AuthContext);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const isAuth = await isAuthenticated();
+        if (isAuth) {
+          navigation.replace('Home');
+        }
+      } catch (error) {
+        console.error('Error checking authentication status:', error);
+      }
+    };
+    
+    checkAuth();
+  }, [navigation]);
 
-  // Validate form inputs
   const validateForm = () => {
     let errors = {};
     
-    // Validate name
     if (!name) {
       errors.name = 'Name is required';
     }
     
-    // Validate email
     if (!email) {
       errors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       errors.email = 'Email is invalid';
     }
     
-    // Validate password
     if (!password) {
       errors.password = 'Password is required';
     } else if (password.length < 6) {
       errors.password = 'Password must be at least 6 characters';
     }
     
-    // Validate confirm password
     if (!confirmPassword) {
       errors.confirmPassword = 'Please confirm your password';
     } else if (password !== confirmPassword) {
@@ -56,17 +67,22 @@ const RegisterScreen = ({ navigation }) => {
     return Object.keys(errors).length === 0;
   };
 
-  // Handle registration
   const handleRegister = async () => {
     if (validateForm()) {
-      setLoading(true);
+      setLocalLoading(true);
       try {
         const result = await register(name, email, password);
         if (result.success) {
+          setName('');
+          setEmail('');
+          setPassword('');
+          setConfirmPassword('');
+          setErrors({});
+          
           Alert.alert(
             'Registration Successful',
             'Your account has been created successfully!',
-            [{ text: 'OK', onPress: () => navigation.navigate('Home') }]
+            [{ text: 'OK', onPress: () => navigation.replace('Home') }]
           );
         } else {
           Alert.alert('Registration Failed', result.error || 'An error occurred during registration');
@@ -74,10 +90,19 @@ const RegisterScreen = ({ navigation }) => {
       } catch (error) {
         Alert.alert('Registration Error', error.message);
       } finally {
-        setLoading(false);
+        setLocalLoading(false);
       }
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4a90e2" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -97,6 +122,8 @@ const RegisterScreen = ({ navigation }) => {
               placeholder="Enter your full name"
               value={name}
               onChangeText={setName}
+              accessibilityLabel="Full Name input"
+              accessibilityHint="Enter your full name"
             />
             {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
           </View>
@@ -110,6 +137,8 @@ const RegisterScreen = ({ navigation }) => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              accessibilityLabel="Email input"
+              accessibilityHint="Enter your email address"
             />
             {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
@@ -122,6 +151,8 @@ const RegisterScreen = ({ navigation }) => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              accessibilityLabel="Password input"
+              accessibilityHint="Create a password with at least 6 characters"
             />
             {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
           </View>
@@ -134,6 +165,8 @@ const RegisterScreen = ({ navigation }) => {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
+              accessibilityLabel="Confirm Password input"
+              accessibilityHint="Confirm your password"
             />
             {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
           </View>
@@ -141,9 +174,11 @@ const RegisterScreen = ({ navigation }) => {
           <TouchableOpacity 
             style={styles.registerButton}
             onPress={handleRegister}
-            disabled={loading}
+            disabled={localLoading}
+            accessibilityLabel="Create Account button"
+            accessibilityHint="Tap to create your account"
           >
-            {loading ? (
+            {localLoading ? (
               <ActivityIndicator color="white" size="small" />
             ) : (
               <Text style={styles.registerButtonText}>Create Account</Text>
@@ -152,7 +187,11 @@ const RegisterScreen = ({ navigation }) => {
           
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('Login')}
+              accessibilityLabel="Sign In"
+              accessibilityHint="Tap to sign in to your existing account"
+            >
               <Text style={styles.loginLink}>Sign In</Text>
             </TouchableOpacity>
           </View>
@@ -166,6 +205,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#4a90e2',
   },
   scrollContainer: {
     flexGrow: 1,
