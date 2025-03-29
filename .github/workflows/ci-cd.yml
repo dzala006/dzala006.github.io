@@ -1,0 +1,159 @@
+name: CI/CD Pipeline
+
+# Trigger the workflow on push or pull request events to the main branch
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Backend tests and build
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+          cache: 'npm'
+          cache-dependency-path: 'personalized-adventure-backend/package-lock.json'
+      
+      - name: Install backend dependencies
+        run: |
+          cd personalized-adventure-backend
+          npm ci
+      
+      - name: Run backend tests
+        run: |
+          cd personalized-adventure-backend
+          npm test
+        env:
+          # Use GitHub secrets for sensitive information
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  
+  # Frontend build
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+          cache: 'npm'
+          cache-dependency-path: 'PersonalizedAdventureApp/package-lock.json'
+      
+      - name: Install Expo CLI
+        run: npm install -g expo-cli
+      
+      - name: Install frontend dependencies
+        run: |
+          cd PersonalizedAdventureApp
+          npm ci
+      
+      - name: Build Expo app
+        run: |
+          cd PersonalizedAdventureApp
+          expo build:web
+        env:
+          # Use GitHub secrets for API keys
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  
+  # Deploy backend (if tests and builds pass)
+  deploy-backend:
+    name: Deploy Backend
+    needs: [backend-test, frontend-build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+      
+      - name: Install Heroku CLI
+        run: npm install -g heroku
+      
+      - name: Login to Heroku
+        run: heroku container:login
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      
+      - name: Deploy to Heroku
+        run: |
+          cd personalized-adventure-backend
+          # This is a simulated deployment to Heroku
+          # In a real scenario, you would use Heroku CLI commands like:
+          # git push heroku main
+          echo "Simulating deployment to Heroku..."
+          # Uncomment the following lines for actual deployment
+          # heroku git:remote -a your-heroku-app-name
+          # git push heroku main
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      
+      - name: Verify deployment
+        run: |
+          echo "Verifying backend deployment..."
+          # In a real scenario, you would check if the app is running:
+          # curl https://your-heroku-app-name.herokuapp.com/api/health
+  
+  # Deploy frontend (if tests and builds pass)
+  deploy-frontend:
+    name: Deploy Frontend
+    needs: [backend-test, frontend-build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+          cache: 'npm'
+          cache-dependency-path: 'PersonalizedAdventureApp/package-lock.json'
+      
+      - name: Install Expo CLI
+        run: npm install -g expo-cli
+      
+      - name: Login to Expo
+        run: expo login -u ${{ secrets.EXPO_USERNAME }} -p ${{ secrets.EXPO_PASSWORD }}
+      
+      - name: Publish to Expo
+        run: |
+          cd PersonalizedAdventureApp
+          expo publish --release-channel production
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "Frontend successfully deployed to Expo!"
+          # In a real scenario, you might want to send a notification
+          # curl -X POST -H "Content-Type: application/json" -d '{"text":"App deployed successfully!"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "Frontend deployment failed!"
+          # In a real scenario, you might want to send a notification
+          # curl -X POST -H "Content-Type: application/json" -d '{"text":"App deployment failed!"}' ${{ secrets.SLACK_WEBHOOK_URL }}
