@@ -21,7 +21,6 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '16'
-          # No cache specified since package-lock.json doesn't exist
       
       - name: Install backend dependencies
         run: |
@@ -50,20 +49,19 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '16'
-          # No cache specified since package-lock.json doesn't exist
       
       - name: Install Expo CLI
-        run: npm install -g expo-cli@6.3.10
+        run: npm install -g expo-cli
       
       - name: Install frontend dependencies
         run: |
           cd PersonalizedAdventureApp
-          npm install
+          npm install --legacy-peer-deps
       
       - name: Build Expo app
         run: |
           cd PersonalizedAdventureApp
-          npx expo export:web
+          npx expo export:web --no-install
         env:
           # Use GitHub secrets for API keys
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -126,15 +124,14 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '16'
-          # No cache specified since package-lock.json doesn't exist
       
       - name: Install Expo CLI
-        run: npm install -g expo-cli@6.3.10
+        run: npm install -g expo-cli
       
       - name: Install frontend dependencies
         run: |
           cd PersonalizedAdventureApp
-          npm install
+          npm install --legacy-peer-deps
       
       - name: Publish to Expo
         run: |
