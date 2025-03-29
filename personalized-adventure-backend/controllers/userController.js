@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const { hashPassword } = require('../middleware/auth');
 
 /**
  * Create a new user
@@ -30,11 +31,14 @@ exports.createUser = async (req, res) => {
       });
     }
     
-    // Create new user
+    // Hash the password
+    const hashedPassword = await hashPassword(password);
+    
+    // Create new user with hashed password
     const newUser = new User({
       username,
       email,
-      password, // In a real app, this would be hashed
+      password: hashedPassword,
       preferences: preferences || {}
     });
     
