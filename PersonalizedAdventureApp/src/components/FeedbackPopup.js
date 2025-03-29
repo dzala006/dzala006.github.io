@@ -5,10 +5,14 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert
+  Alert,
+  Animated,
+  Pressable
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
+import styles from './FeedbackPopup.styled';
+import { Typography, Button } from './common';
+import { colors } from '../theme/theme';
 
 /**
  * FeedbackPopup Component
@@ -26,247 +30,257 @@ const FeedbackPopup = ({ visible, onClose, onSubmit }) => {
   const [response, setResponse] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState({});
   const [error, setError] = useState('');
+  const [selectedOption, setSelectedOption] = useState(null);
+  
+  // Animation values
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [scaleAnim] = useState(new Animated.Value(0.9));
 
   // Predefined array of feedback questions
   const feedbackQuestions = [
     {
       id: 1,
       question: "How adventurous do you feel right now?",
-      type: "scale", // Could be used for different input types
+      type: "options",
+      options: ["Very adventurous", "Somewhat adventurous", "Not very adventurous", "Just want to relax"],
       context: "mood"
     },
     {
       id: 2,
       question: "Do you prefer exploring new places or revisiting favorites?",
-      type: "preference",
+      type: "options",
+      options: ["Always new places", "Mostly new places", "Mostly favorites", "Always favorites"],
       context: "exploration"
     },
     {
       id: 3,
       question: "What type of activity would you enjoy most today?",
-      type: "preference",
+      type: "options",
+      options: ["Outdoor adventure", "Cultural experience", "Food & dining", "Relaxation"],
       context: "activity"
     },
     {
       id: 4,
-      question: "How important is budget in your current travel decisions?",
-      type: "scale",
+      question: "How important is budget in your current plans?",
+      type: "options",
+      options: ["Very important", "Somewhat important", "Not very important", "Not a concern"],
       context: "budget"
     },
     {
       id: 5,
-      question: "Are you looking for relaxation or excitement in your next adventure?",
-      type: "preference",
-      context: "experience"
-    },
-    {
-      id: 6,
-      question: "What's your current energy level for activities?",
-      type: "scale",
-      context: "energy"
-    },
-    {
-      id: 7,
-      question: "Do you prefer indoor or outdoor activities right now?",
-      type: "preference",
-      context: "environment"
-    },
-    {
-      id: 8,
-      question: "How social do you feel? Solo adventures or group experiences?",
-      type: "preference",
+      question: "Are you in the mood for social activities or solitude?",
+      type: "options",
+      options: ["Very social", "Somewhat social", "Mostly solitary", "Complete solitude"],
       context: "social"
     },
     {
+      id: 6,
+      question: "How much time do you have available today?",
+      type: "options",
+      options: ["Just an hour or two", "Half day", "Full day", "Multiple days"],
+      context: "time"
+    },
+    {
+      id: 7,
+      question: "What's your energy level right now?",
+      type: "options",
+      options: ["Very energetic", "Moderately energetic", "Somewhat tired", "Very tired"],
+      context: "energy"
+    },
+    {
+      id: 8,
+      question: "Any specific dietary preferences for today?",
+      type: "text",
+      context: "dietary"
+    },
+    {
       id: 9,
-      question: "What's your current food preference for this trip?",
-      type: "preference",
-      context: "food"
+      question: "What's your current transportation preference?",
+      type: "options",
+      options: ["Walking", "Public transit", "Driving", "Biking"],
+      context: "transportation"
     },
     {
       id: 10,
-      question: "How far are you willing to travel for your next adventure?",
-      type: "scale",
-      context: "distance"
+      question: "Any specific interests you'd like to explore today?",
+      type: "text",
+      context: "interests"
     }
   ];
 
-  // Select a random question when the component mounts or when the modal becomes visible
+  // Select a random question when the modal becomes visible
   useEffect(() => {
     if (visible) {
       const randomIndex = Math.floor(Math.random() * feedbackQuestions.length);
       setCurrentQuestion(feedbackQuestions[randomIndex]);
       setResponse('');
+      setSelectedOption(null);
       setError('');
+      
+      // Start animations
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 6,
+          tension: 40,
+          useNativeDriver: true,
+        })
+      ]).start();
+    } else {
+      // Reset animations when modal closes
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.9);
     }
   }, [visible]);
 
-  // Handle submission of feedback
+  // Handle form submission
   const handleSubmit = () => {
-    // Validate that a response was provided
-    if (!response.trim()) {
-      setError('Please provide a response before submitting');
+    // Validate response
+    if (currentQuestion.type === 'text' && !response.trim()) {
+      setError('Please provide a response');
       return;
     }
-
-    // Update the global state with the new feedback
+    
+    if (currentQuestion.type === 'options' && selectedOption === null) {
+      setError('Please select an option');
+      return;
+    }
+    
+    // Clear error if validation passes
+    setError('');
+    
+    // Prepare feedback data
+    const feedbackData = {
+      questionId: currentQuestion.id,
+      question: currentQuestion.question,
+      response: currentQuestion.type === 'options' ? currentQuestion.options[selectedOption] : response,
+      context: currentQuestion.context,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Update survey data in context
     updateSurveyData({
       responses: {
-        [currentQuestion.id]: {
-          questionId: currentQuestion.id,
-          question: currentQuestion.question,
-          response: response,
-          context: currentQuestion.context,
-          timestamp: new Date().toISOString()
-        }
+        [currentQuestion.id]: feedbackData
       }
     });
-
-    // Call the onSubmit callback if provided
+    
+    // Call onSubmit callback if provided
     if (onSubmit) {
-      onSubmit({
-        questionId: currentQuestion.id,
-        response: response,
-        context: currentQuestion.context
-      });
+      onSubmit(feedbackData);
     }
-
-    // Reset and close the modal
-    setResponse('');
+    
+    // Close the modal
     onClose();
+  };
 
-    // Show a thank you message
-    Alert.alert(
-      "Thank You!",
-      "Your feedback helps us personalize your adventure experience.",
-      [{ text: "OK" }]
+  // Render options for multiple choice questions
+  const renderOptions = () => {
+    if (currentQuestion.type !== 'options' || !currentQuestion.options) {
+      return null;
+    }
+    
+    return (
+      <View style={styles.optionContainer}>
+        {currentQuestion.options.map((option, index) => (
+          <Pressable
+            key={index}
+            style={[
+              styles.optionButton,
+              selectedOption === index && styles.optionButtonSelected
+            ]}
+            onPress={() => setSelectedOption(index)}
+            accessibilityLabel={option}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: selectedOption === index }}
+          >
+            <Text 
+              style={[
+                styles.optionText,
+                selectedOption === index && styles.optionTextSelected
+              ]}
+            >
+              {option}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
     );
   };
 
   return (
     <Modal
-      animationType="slide"
-      transparent={true}
       visible={visible}
+      transparent
+      animationType="none"
       onRequestClose={onClose}
     >
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>Quick Feedback</Text>
+      <View style={styles.modalContainer}>
+        <Animated.View 
+          style={[
+            styles.modalContent,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }]
+            }
+          ]}
+        >
+          <View style={styles.header}>
+            <Typography variant="h3" center color={colors.primary.main}>
+              Quick Feedback
+            </Typography>
+          </View>
           
-          <Text style={styles.questionText}>{currentQuestion.question}</Text>
+          <Typography variant="body1" center style={styles.question}>
+            {currentQuestion.question}
+          </Typography>
           
-          <TextInput
-            style={styles.input}
-            placeholder="Type your response here..."
-            value={response}
-            onChangeText={setResponse}
-            multiline={true}
-            numberOfLines={3}
-          />
+          {currentQuestion.type === 'text' ? (
+            <TextInput
+              style={styles.input}
+              value={response}
+              onChangeText={setResponse}
+              placeholder="Type your response here..."
+              multiline
+              accessibilityLabel="Feedback response input"
+              accessibilityHint="Enter your response to the feedback question"
+            />
+          ) : (
+            renderOptions()
+          )}
           
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error ? (
+            <Typography variant="caption" color={colors.error} center>
+              {error}
+            </Typography>
+          ) : null}
           
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.buttonCancel]}
+            <Button
+              title="Skip"
+              variant="outline"
               onPress={onClose}
-            >
-              <Text style={styles.buttonCancelText}>Skip</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.button, styles.buttonSubmit]}
+              style={{ marginRight: 8 }}
+              accessibilityLabel="Skip feedback"
+              accessibilityHint="Skip providing feedback for now"
+            />
+            <Button
+              title="Submit"
               onPress={handleSubmit}
-            >
-              <Text style={styles.buttonSubmitText}>Submit</Text>
-            </TouchableOpacity>
+              style={{ marginLeft: 8 }}
+              accessibilityLabel="Submit feedback"
+              accessibilityHint="Submit your feedback response"
+            />
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  centeredView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)'
-  },
-  modalView: {
-    width: '85%',
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 25,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-    color: '#4a90e2'
-  },
-  questionText: {
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: 'center',
-    color: '#333'
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
-    textAlignVertical: 'top',
-    fontSize: 16
-  },
-  errorText: {
-    color: 'red',
-    marginBottom: 10,
-    textAlign: 'center'
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10
-  },
-  button: {
-    borderRadius: 8,
-    padding: 12,
-    elevation: 2,
-    flex: 1,
-    alignItems: 'center'
-  },
-  buttonSubmit: {
-    backgroundColor: '#4a90e2',
-    marginLeft: 10
-  },
-  buttonCancel: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginRight: 10
-  },
-  buttonSubmitText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16
-  },
-  buttonCancelText: {
-    color: '#666',
-    fontSize: 16
-  }
-});
 
 export default FeedbackPopup;
