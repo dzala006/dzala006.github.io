@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as apiService from '../utils/apiService';
+import { isAuthenticated, getToken, parseToken, removeToken } from '../utils/tokenStorage';
 
 // Create the Authentication Context
 export const AuthContext = createContext();
@@ -8,6 +10,7 @@ export const AuthProvider = ({ children }) => {
   // State for user authentication
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authToken, setAuthToken] = useState(null);
   
   // State for user preferences
   const [preferences, setPreferences] = useState({
@@ -24,15 +27,41 @@ export const AuthProvider = ({ children }) => {
     responses: {}
   });
 
-  // Load user data from AsyncStorage on app start
+  // Load user data from storage on app start
   useEffect(() => {
     const loadUserFromStorage = async () => {
       try {
-        const userJson = await AsyncStorage.getItem('user');
+        // Check if user is authenticated with a valid token
+        const isAuth = await isAuthenticated();
+        
+        if (isAuth) {
+          // Get the token
+          const token = await getToken();
+          setAuthToken(token);
+          
+          // Parse token to get user ID
+          const tokenData = parseToken(token);
+          
+          if (tokenData && tokenData.user && tokenData.user.id) {
+            // Fetch user data from API
+            try {
+              const userData = await apiService.get(`/users/${tokenData.user.id}`);
+              if (userData && userData.data) {
+                setUser(userData.data);
+              }
+            } catch (error) {
+              console.error('Failed to fetch user data from API', error);
+              // Token might be invalid, remove it
+              await removeToken();
+              setAuthToken(null);
+            }
+          }
+        }
+        
+        // Load preferences and survey data from AsyncStorage
         const preferencesJson = await AsyncStorage.getItem('preferences');
         const surveyJson = await AsyncStorage.getItem('surveyData');
         
-        if (userJson) setUser(JSON.parse(userJson));
         if (preferencesJson) setPreferences(JSON.parse(preferencesJson));
         if (surveyJson) setSurveyData(JSON.parse(surveyJson));
       } catch (error) {
@@ -44,25 +73,6 @@ export const AuthProvider = ({ children }) => {
     
     loadUserFromStorage();
   }, []);
-
-  // Save user data to AsyncStorage whenever it changes
-  useEffect(() => {
-    const saveUserToStorage = async () => {
-      try {
-        if (user) {
-          await AsyncStorage.setItem('user', JSON.stringify(user));
-        } else {
-          await AsyncStorage.removeItem('user');
-        }
-      } catch (error) {
-        console.error('Failed to save user data to storage', error);
-      }
-    };
-    
-    if (!isLoading) {
-      saveUserToStorage();
-    }
-  }, [user, isLoading]);
 
   // Save preferences to AsyncStorage whenever they change
   useEffect(() => {
@@ -96,20 +106,20 @@ export const AuthProvider = ({ children }) => {
 
   // Login function
   const login = async (email, password) => {
-    // In a real app, you would make an API call here
-    // This is a placeholder for demonstration
     setIsLoading(true);
     try {
-      // Simulate API call
-      const userData = {
-        id: '123',
-        name: 'Test User',
-        email: email,
-        token: 'sample-jwt-token'
-      };
+      // Call the API service login function
+      const result = await apiService.login(email, password);
       
-      setUser(userData);
-      return { success: true };
+      if (result.success && result.user) {
+        setUser(result.user);
+        // Get the token after successful login
+        const token = await getToken();
+        setAuthToken(token);
+        return { success: true };
+      } else {
+        return { success: false, error: result.error || 'Login failed' };
+      }
     } catch (error) {
       return { success: false, error: error.message };
     } finally {
@@ -119,19 +129,20 @@ export const AuthProvider = ({ children }) => {
 
   // Register function
   const register = async (name, email, password) => {
-    // In a real app, you would make an API call here
     setIsLoading(true);
     try {
-      // Simulate API call
-      const userData = {
-        id: '123',
-        name: name,
-        email: email,
-        token: 'sample-jwt-token'
-      };
+      // Call the API service register function
+      const result = await apiService.register(name, email, password);
       
-      setUser(userData);
-      return { success: true };
+      if (result.success && result.user) {
+        setUser(result.user);
+        // Get the token after successful registration
+        const token = await getToken();
+        setAuthToken(token);
+        return { success: true };
+      } else {
+        return { success: false, error: result.error || 'Registration failed' };
+      }
     } catch (error) {
       return { success: false, error: error.message };
     } finally {
@@ -143,9 +154,17 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     setIsLoading(true);
     try {
-      // Clear user data
-      setUser(null);
-      return { success: true };
+      // Call the API service logout function
+      const result = await apiService.logout();
+      
+      if (result.success) {
+        // Clear user data
+        setUser(null);
+        setAuthToken(null);
+        return { success: true };
+      } else {
+        return { success: false, error: result.error || 'Logout failed' };
+      }
     } catch (error) {
       return { success: false, error: error.message };
     } finally {
@@ -173,6 +192,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         isLoading,
+        authToken,
         login,
         register,
         logout,

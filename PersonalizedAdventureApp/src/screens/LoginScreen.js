@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -12,26 +12,39 @@ import {
   Alert
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
+import { isAuthenticated } from '../utils/tokenStorage';
 
 const LoginScreen = ({ navigation }) => {
-  const { login } = useContext(AuthContext);
+  const { login, isLoading } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const isAuth = await isAuthenticated();
+        if (isAuth) {
+          navigation.replace('Home');
+        }
+      } catch (error) {
+        console.error('Error checking authentication status:', error);
+      }
+    };
+    
+    checkAuth();
+  }, [navigation]);
 
-  // Validate form inputs
   const validateForm = () => {
     let errors = {};
     
-    // Validate email
     if (!email) {
       errors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       errors.email = 'Email is invalid';
     }
     
-    // Validate password
     if (!password) {
       errors.password = 'Password is required';
     } else if (password.length < 6) {
@@ -42,24 +55,36 @@ const LoginScreen = ({ navigation }) => {
     return Object.keys(errors).length === 0;
   };
 
-  // Handle login
   const handleLogin = async () => {
     if (validateForm()) {
-      setLoading(true);
+      setLocalLoading(true);
       try {
         const result = await login(email, password);
         if (result.success) {
-          navigation.navigate('Home');
+          setEmail('');
+          setPassword('');
+          setErrors({});
+          
+          navigation.replace('Home');
         } else {
           Alert.alert('Login Failed', result.error || 'Invalid credentials');
         }
       } catch (error) {
         Alert.alert('Login Error', error.message);
       } finally {
-        setLoading(false);
+        setLocalLoading(false);
       }
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4a90e2" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -81,6 +106,8 @@ const LoginScreen = ({ navigation }) => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              accessibilityLabel="Email input"
+              accessibilityHint="Enter your email address"
             />
             {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
@@ -93,6 +120,8 @@ const LoginScreen = ({ navigation }) => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              accessibilityLabel="Password input"
+              accessibilityHint="Enter your password"
             />
             {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
           </View>
@@ -100,6 +129,8 @@ const LoginScreen = ({ navigation }) => {
           <TouchableOpacity 
             style={styles.forgotPassword}
             onPress={() => Alert.alert('Reset Password', 'Password reset functionality will be implemented in a future update.')}
+            accessibilityLabel="Forgot Password"
+            accessibilityHint="Tap to reset your password"
           >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
@@ -107,9 +138,11 @@ const LoginScreen = ({ navigation }) => {
           <TouchableOpacity 
             style={styles.loginButton}
             onPress={handleLogin}
-            disabled={loading}
+            disabled={localLoading}
+            accessibilityLabel="Sign In button"
+            accessibilityHint="Tap to sign in to your account"
           >
-            {loading ? (
+            {localLoading ? (
               <ActivityIndicator color="white" size="small" />
             ) : (
               <Text style={styles.loginButtonText}>Sign In</Text>
@@ -118,7 +151,11 @@ const LoginScreen = ({ navigation }) => {
           
           <View style={styles.registerContainer}>
             <Text style={styles.registerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('Register')}
+              accessibilityLabel="Sign Up"
+              accessibilityHint="Tap to create a new account"
+            >
               <Text style={styles.registerLink}>Sign Up</Text>
             </TouchableOpacity>
           </View>
@@ -132,6 +169,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#4a90e2',
   },
   scrollContainer: {
     flexGrow: 1,
